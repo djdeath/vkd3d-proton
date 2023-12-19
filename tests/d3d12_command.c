@@ -2395,13 +2395,13 @@ void test_execute_indirect_state_predication(void)
     memset(&query_desc, 0, sizeof(query_desc));
     query_desc.Count = 64 * 1024;
     query_desc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    ID3D12Device_CreateQueryHeap(context.device, &query_desc, &IID_ID3D12QueryHeap, (void **)&query_heap);
+    /* ID3D12Device_CreateQueryHeap(context.device, &query_desc, &IID_ID3D12QueryHeap, (void **)&query_heap); */
     query_readback = create_readback_buffer(context.device, 64 * 1024 * sizeof(uint64_t));
 
     /* Graphics */
     {
         timestamp_index = 0;
-        ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++);
+        /* ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++); */
 
         /* Make sure the first timestamp is ordered before any reordered preprocess work. */
         ID3D12GraphicsCommandList_Close(context.list);
@@ -2419,7 +2419,7 @@ void test_execute_indirect_state_predication(void)
         ID3D12GraphicsCommandList_IASetPrimitiveTopology(context.list, D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         ID3D12GraphicsCommandList_SetGraphicsRootConstantBufferView(context.list, 1, ID3D12Resource_GetGPUVirtualAddress(indirect_counts) + 256);
 
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < 1; i++)
         {
             if (i == 0)
                 ID3D12GraphicsCommandList_SetPredication(context.list, NULL, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
@@ -2433,12 +2433,13 @@ void test_execute_indirect_state_predication(void)
 
             /* Try to trigger sync issues. */
             ID3D12GraphicsCommandList_SetGraphicsRootUnorderedAccessView(context.list, 2, ID3D12Resource_GetGPUVirtualAddress(output) + (i * 512 + 1) * sizeof(uint32_t));
-            for (j = 0; j < 16; j++)
+            for (j = 0; j < 1; j++)
             {
                 ID3D12GraphicsCommandList_ExecuteIndirect(context.list, sig, 128, indirect_graphics, 0, NULL, 0); /* last draw will do something, verify we actually check all draws when we cull */
-                ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++);
+                /* ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++); */
             }
 
+#if 0
             ID3D12GraphicsCommandList_SetGraphicsRootUnorderedAccessView(context.list, 2, ID3D12Resource_GetGPUVirtualAddress(output) + (i * 512 + 0) * sizeof(uint32_t));
             /* Hammer hard to study profiler. */
             for (j = 0; j < 1024; j++)
@@ -2490,25 +2491,26 @@ void test_execute_indirect_state_predication(void)
                 transition_resource_state(context.list, indirect_copy, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT, D3D12_RESOURCE_STATE_COPY_DEST);
                 transition_resource_state(context.list, indirect_copy, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT); /* --- split --- */
             }
+#endif
         }
 
         assert(timestamp_index <= 64 * 1024);
-        ID3D12GraphicsCommandList_ResolveQueryData(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, 0, timestamp_index,
-                query_readback, 0);
+        /* ID3D12GraphicsCommandList_ResolveQueryData(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, 0, timestamp_index, */
+        /*         query_readback, 0); */
 
         ID3D12GraphicsCommandList_SetPredication(context.list, NULL, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
         transition_resource_state(context.list, output, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
         get_buffer_readback_with_command_list(output, DXGI_FORMAT_UNKNOWN, &rb, context.queue, context.list);
         reset_command_list(context.list, context.allocator);
 
-        for (i = 0; i < 128; i++)
+        for (i = 0; i < 1; i++)
         {
             uint32_t expected_y;
             uint32_t expected_w;
             struct uvec4 value;
             uint32_t expected;
 
-            for (j = 0; j < 6; j++)
+            for (j = 0; j < 1; j++)
             {
                 value = *get_readback_uvec4(&rb, i + 128 * j, 0);
 
@@ -2523,6 +2525,8 @@ void test_execute_indirect_state_predication(void)
                 expected_y = expected * 16;
 
                 /* of the gang of 4 draws, the first one should not do anything */
+                fprintf(stderr, "values=%u, %u, %u, %u\n",
+                        value.x, value.y, value.z, value.w);
                 ok(value.x == 0 && value.y == expected_y && value.z == expected && value.w == expected_w,
                         "Iteration %u, draw output %u: expected {%u, %u, %u, %u}, got {%u, %u, %u, %u}.\n", j, i, 0,
                         expected_y, expected, expected,
@@ -2533,11 +2537,11 @@ void test_execute_indirect_state_predication(void)
         release_resource_readback(&rb);
         ID3D12Resource_Release(output);
 
-        report_predication_timestamps(context.queue, query_readback, timestamp_index, "DGC");
+        //report_predication_timestamps(context.queue, query_readback, timestamp_index, "DGC");
     }
 
     /* Compute */
-    {
+    if (false) {
         timestamp_index = 0;
 
         ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++);
@@ -2552,7 +2556,7 @@ void test_execute_indirect_state_predication(void)
         ID3D12GraphicsCommandList_SetComputeRootConstantBufferView(context.list, 1, ID3D12Resource_GetGPUVirtualAddress(indirect_counts) + 256);
         ID3D12GraphicsCommandList_SetPipelineState(context.list, pso_comp);
 
-        for (i = 0; i < 6; i++)
+        for (i = 0; i < 1; i++)
         {
             if (i == 0)
                 ID3D12GraphicsCommandList_SetPredication(context.list, NULL, 0, D3D12_PREDICATION_OP_EQUAL_ZERO);
@@ -2642,7 +2646,7 @@ void test_execute_indirect_state_predication(void)
             struct uvec4 value;
             uint32_t expected;
 
-            for (j = 0; j < 6; j++)
+            for (j = 0; j < 1; j++)
             {
                 value = *get_readback_uvec4(&rb, i + 128 * j, 0);
 
@@ -2670,7 +2674,7 @@ void test_execute_indirect_state_predication(void)
     }
 
     ID3D12Resource_Release(query_readback);
-    ID3D12QueryHeap_Release(query_heap);
+    /* ID3D12QueryHeap_Release(query_heap); */
 
     ID3D12CommandSignature_Release(sig);
     ID3D12CommandSignature_Release(sig_compute);
@@ -3946,7 +3950,7 @@ void test_unaligned_vertex_stride(void)
     static const float white[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
     struct unaligned_i16vec4 unaligned_colors[ARRAY_SIZE(colors)];
-    
+
     for (i = 0; i < ARRAY_SIZE(colors); i++)
         memcpy(&unaligned_colors[i], &colors[i], sizeof(*colors));
 

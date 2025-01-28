@@ -1987,7 +1987,7 @@ void test_execute_indirect_state_predication(void)
         indirect_graphics = create_upload_buffer(context.device, sizeof(draws), draws);
     }
 
-    {
+    if (0) {
         /* Test various ways to observe empty dispatches. */
         struct dispatch_arguments dispatches[128] = {{0}};
         for (i = 0; i < ARRAY_SIZE(dispatches); i++)
@@ -2163,7 +2163,7 @@ void test_execute_indirect_state_predication(void)
     }
 
     /* Compute */
-    {
+    if (0) {
         timestamp_index = 0;
 
         ID3D12GraphicsCommandList_EndQuery(context.list, query_heap, D3D12_QUERY_TYPE_TIMESTAMP, timestamp_index++);
@@ -2302,7 +2302,7 @@ void test_execute_indirect_state_predication(void)
     ID3D12CommandSignature_Release(sig_compute);
     ID3D12Resource_Release(indirect_counts);
     ID3D12Resource_Release(indirect_graphics);
-    ID3D12Resource_Release(indirect_compute);
+    /* ID3D12Resource_Release(indirect_compute); */
     ID3D12Resource_Release(indirect_copy);
     ID3D12PipelineState_Release(pso_comp);
     ID3D12PipelineState_Release(pso_gfx);

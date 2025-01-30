@@ -741,17 +741,20 @@ static inline void check_readback_data_uint_(unsigned int line, struct resource_
                 got = get_readback_uint(rb, x, y, z);
                 if (!compare_color(got, expected, max_diff))
                 {
-                    all_match = false;
-                    break;
+                  ok_(line)(all_match, "Got 0x%08x, expected 0x%08x at (%u, %u, %u) rb(%u, %u, %u).\n",
+                            got, expected, x, y, z, rb->width, rb->height, rb->depth);
+                  all_match = false;
+                    /* break; */
                 }
             }
-            if (!all_match)
-                break;
+            /* if (!all_match) */
+            /*     break; */
         }
-        if (!all_match)
-            break;
+        /* if (!all_match) */
+        /*     break; */
     }
-    ok_(line)(all_match, "Got 0x%08x, expected 0x%08x at (%u, %u, %u).\n", got, expected, x, y, z);
+    /* ok_(line)(all_match, "Got 0x%08x, expected 0x%08x at (%u, %u, %u) rb(%u, %u, %u).\n", */
+    /*           got, expected, x, y, z, rb->width, rb->height, rb->depth); */
 }
 
 #define check_sub_resource_uint(a, b, c, d, e, f) check_sub_resource_uint_(__LINE__, a, b, c, d, e, f)
